@@ -162,7 +162,8 @@ class TileView extends Component<Props, State> {
      * @private
      */
     _getColumnCount() {
-        const participantCount = this.props._participants.length;
+        let participantCount = this.props._participants.length;
+	participantCount = participantCount > 4 ? 4 : participantCount;
 
         // For narrow view, tiles should stack on top of each other for a lonely
         // call and a 1:1 call. Otherwise tiles should be grouped into rows of
@@ -188,15 +189,38 @@ class TileView extends Component<Props, State> {
     _getSortedParticipants() {
         const participants = [];
         let localParticipant;
+        let dominanatParticipant;
 
+	/*const size = this.props._participants.length;
+	for (let i=0;i<size;i++) {
+	    let participant = this.props._participants[i];
+	    if (participant.local) {
+                localParticipant = participant;
+            } else if (participants.length<=3) {
+                participants.push(participant);
+            }
+	}*/
         for (const participant of this.props._participants) {
             if (participant.local) {
                 localParticipant = participant;
-            } else {
+                console.log("Local Speaker: ");
+                console.log(dominanatParticipant.name);
+            } else if (!participant.local && participant.dominantSpeaker) {
+                dominanatParticipant = participant;
+                console.log("Dominant Speaker: ");
+                console.log(dominanatParticipant.name);
+            }
+        }
+        for (const participant of this.props._participants) {
+            if (!participant.local && !participant.dominantSpeaker) {
                 participants.push(participant);
+                if ((dominanatParticipant && participants.length == 2) || participants.length == 3) {
+                    break;
+                }
             }
         }
 
+        dominanatParticipant && participants.push(dominanatParticipant);
         localParticipant && participants.push(localParticipant);
 
         return participants;
@@ -212,7 +236,7 @@ class TileView extends Component<Props, State> {
         const { _participants } = this.props;
         const { height, width } = this.state;
         const columns = this._getColumnCount();
-        const participantCount = _participants.length;
+        const participantCount = _participants.length > 4 ? 4 : _participants.length;
         const heightToUse = height - (MARGIN * 2);
         const widthToUse = width - (MARGIN * 2);
         let tileWidth;
@@ -288,14 +312,14 @@ class TileView extends Component<Props, State> {
      * @returns {ReactElement[]}
      */
     _renderThumbnails() {
-        const styleOverrides = {
+        /*const styleOverrides = {
             aspectRatio: TILE_ASPECT_RATIO,
             flex: 0,
             height: this._getTileDimensions().height,
             width: null
-        };
+        };*/
 
-        return this._getSortedParticipants()
+       /* return this._getSortedParticipants()
             .map(participant => (
                 <Thumbnail
                     disableTint = { true }
@@ -303,8 +327,73 @@ class TileView extends Component<Props, State> {
                     participant = { participant }
                     renderDisplayName = { true }
                     styleOverrides = { styleOverrides }
-                    tileView = { true } />));
+                    tileView = { true } />));*/
+
+	const thumbnails= [];
+	const participants = this._getSortedParticipants();
+	const size = participants.length;
+	for (let i=0;i<size;i++) {
+	    let participant = participants[i];
+
+	let widthV = this._getTileDimensions().width;
+	let heightV = this._getTileDimensions().height;
+	let as = 1;
+	if (size>2) {
+	   const { height, width } = this.state;
+           const heightToUse = height;
+           const widthToUse = width;
+	   if (i == 0 || i == 1 || size == 4) {
+		widthV = widthToUse/2;
+		heighV = heightToUse/2;	
+		as = 3/6;
+		
+	   } else if (size == 3 && i == 2) {
+		widthV = widthToUse;
+		heighV = heightToUse/2;
+		as = 1/1;
+	   }
+	}
+	styleOverrides = {
+            aspectRatio: as,
+            flex: 0,
+            height: heightV,
+            width: widthV
+        };
+
+	    thumbnails.push(
+		<Thumbnail
+                    disableTint = { true }
+                    key = { participant.id }
+                    participant = { participant }
+                    renderDisplayName = { true }
+                    styleOverrides = { styleOverrides }
+                    tileView = { true } />);
+	}
+	return thumbnails;
     }
+
+    /*_getStyleOverdues(pNum: number, pSize: number) {
+	let widthV = this._getTileDimensions().width;
+	let heightV = this._getTileDimensions().height;
+	if (pSize>2) {
+	   const { height, width } = this.state;
+           const heightToUse = height - (MARGIN * 2);
+           const widthToUse = width - (MARGIN * 2);
+	   if (pNum == 0 || pNum == 1 || pSize == 4) {
+		widthV = widthToUse/2;
+		heighV = heightToUse/2;
+	   } else if (pSize == 3 && pNum == 2) {
+		widthV = widthToUse;
+		heighV = heightToUse/2;
+	   }
+	}
+	return {
+            aspectRatio: TILE_ASPECT_RATIO,
+            flex: 0,
+            height: heightV,
+            width: widthV
+        };
+    }*/
 
     /**
      * Sets the receiver video quality based on the dimensions of the thumbnails
